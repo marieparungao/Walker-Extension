@@ -33,48 +33,6 @@ source(
 # Study years
 years <- 2018:2022
 
-# ------------------------------------------------------------
-# Inspect IPEDS ZIP contents
-# ------------------------------------------------------------
-
-ipeds_folder <- here::here(
-  "data",
-  "original data",
-  "IPEDS"
-)
-
-# Find all IPEDS ZIP files
-zip_files <- list.files(
-  ipeds_folder,
-  pattern = "\\.zip$",
-  full.names = TRUE
-)
-
-# List the files contained inside each ZIP
-zip_contents <- purrr::map_dfr(
-  zip_files,
-  function(zip_file) {
-    
-    contents <- unzip(
-      zip_file,
-      list = TRUE
-    )
-    
-    contents |>
-      mutate(
-        zip_file = basename(zip_file)
-      )
-  }
-)
-
-# Show only the ZIP name and files inside it
-zip_contents |>
-  select(
-    zip_file,
-    Name
-  ) |>
-  as_tibble() |>
-  print(n = Inf)
 
 # ------------------------------------------------------------
 # Extract selected IPEDS files
@@ -95,16 +53,10 @@ hd_folder <- here::here(
   "HD"
 )
 
-efc_folder <- here::here(
-  "data",
-  "original data",
-  "IPEDS",
-  "EF-C"
-)
 
 dir.create(adm_folder, showWarnings = FALSE)
 dir.create(hd_folder, showWarnings = FALSE)
-dir.create(efc_folder, showWarnings = FALSE)
+
 # Extract revised ADM files
 for (year in years) {
   
@@ -145,26 +97,6 @@ for (year in years) {
     exdir = hd_folder
   )
 }
-# Extract revised EF-C files
-for (year in years) {
-  
-  zip_path <- file.path(
-    ipeds_folder,
-    paste0("EF", year, "C.zip")
-  )
-  
-  file_to_extract <- paste0(
-    "ef",
-    year,
-    "c_rv.csv"
-  )
-  
-  unzip(
-    zip_path,
-    files = file_to_extract,
-    exdir = efc_folder
-  )
-}
 
 # ------------------------------------------------------------
 # Import U.S. News rankings data
@@ -198,65 +130,13 @@ df.rank <- df.rank |>
     rank_2023,
     university
   )
-# ------------------------------------------------------------
-# Import IPEDS Admissions data
-# ------------------------------------------------------------
 
-# Import 2018 revised admissions file for inspection
-adm2018_raw <- readr::read_csv(
-  here::here(
-    "data",
-    "original data",
-    "IPEDS",
-    "ADM",
-    "adm2018_rv.csv"
-  ),
-  show_col_types = FALSE
-)
-# Clean 2018 admissions data
-adm2018 <- adm2018_raw |>
-  transmute(
-    unitid = as.integer(UNITID),
-    year = 2018,
-    applicants_total = APPLCN,
-    applicants_men = APPLCNM,
-    applicants_women = APPLCNW,
-    wshare = if_else(
-      APPLCNM + APPLCNW > 0,
-      APPLCNW / (APPLCNM + APPLCNW),
-      NA_real_
-    )
-  )
 # Import and combine admissions data for all study years
 df.adm <- purrr::map_dfr(
   years,
   read_adm_year
 )
 
-# ------------------------------------------------------------
-# Import IPEDS Directory data
-# ------------------------------------------------------------
-
-# Import 2018 directory file first for inspection
-hd2018_raw <- readr::read_csv(
-  here::here(
-    "data",
-    "original data",
-    "IPEDS",
-    "HD",
-    "hd2018.csv"
-  ),
-  show_col_types = FALSE
-)
-# Clean 2018 directory data
-hd2018 <- hd2018_raw |>
-  transmute(
-    unitid = as.integer(UNITID),
-    year = 2018,
-    institution = INSTNM,
-    state = STABBR,
-    control = as.integer(CONTROL)
-  )
 
 # Import and combine directory data for all study years
 df.hd <- purrr::map_dfr(

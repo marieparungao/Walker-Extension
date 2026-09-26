@@ -220,25 +220,3 @@ readr::write_csv(
     "walker_replication_comparison.csv"
   )
 )
-
-# ------------------------------------------------------------
-# Save comparison tables
-# ------------------------------------------------------------
-
-readr::write_csv(
-  event_coefs,
-  here::here(
-    "results",
-    "tables",
-    "main_event_coefficients.csv"
-  )
-)
-
-readr::write_csv(
-  replication_comparison,
-  here::here(
-    "results",
-    "tables",
-    "walker_replication_comparison.csv"
-  )
-)
