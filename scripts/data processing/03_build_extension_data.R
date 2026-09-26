@@ -160,3 +160,144 @@ state_covariates <- state_covariates |>
       effective_min_wage *
       (base_cpi / cpi)
   )
+
+# ------------------------------------------------------------
+# School-level time-varying covariates
+# Acceptance rate
+# ------------------------------------------------------------
+
+# This function reads one year of the same IPEDS Admissions
+# data already used in the original Walker replication.
+#
+# We only keep the variables needed to construct acceptance rate:
+#   APPLCN = total number of applicants
+#   ADMSSN = total number admitted
+#
+# Acceptance rate = admitted / applicants
+# Kept numerator and denominator in case something
+# Looks off later
+read_acceptance_year <- function(year) {
+  
+  adm_file <- here::here(
+    "data",
+    "original data",
+    "IPEDS",
+    "ADM",
+    paste0(
+      "adm",
+      year,
+      "_rv.csv"
+    )
+  )
+  
+  readr::read_csv(
+    adm_file,
+    show_col_types = FALSE
+  ) |>
+    transmute(
+      unitid = as.integer(UNITID),
+      year = year,
+      applicants = as.numeric(APPLCN),
+      admitted = as.numeric(ADMSSN),
+      
+      # Avoid dividing by zero if a school reports
+      # zero applicants in a given year.
+      acceptance_rate = if_else(
+        applicants > 0,
+        admitted / applicants,
+        NA_real_
+      )
+    )
+}
+# Apply the acceptance-rate function to every
+# year in the Walker analysis period.
+acceptance_data <- purrr::map_dfr(
+  years,
+  read_acceptance_year
+)
+
+# ------------------------------------------------------------
+# Restrict acceptance-rate data to Walker sample
+# ------------------------------------------------------------
+
+acceptance_walker <- maindf |>
+  
+  # Start with the exact school-year observations
+  # already contained in the replication dataset.
+  select(
+    unitid,
+    year
+  ) |>
+  
+  # Add acceptance rate using the school and year.
+  left_join(
+    acceptance_data,
+    by = c(
+      "unitid",
+      "year"
+    )
+  )
+
+# ------------------------------------------------------------
+# Region variable for region-by-year fixed effects
+# ------------------------------------------------------------
+
+# IPEDS Directory (HD) files contain OBEREG, a geographic
+# region identifier for each institution.
+#
+# We read this directly from the same HD files already used
+# in the original Walker replication instead of manually
+# assigning states to regions.
+
+read_region_year <- function(year) {
+  
+  hd_file <- here::here(
+    "data",
+    "original data",
+    "IPEDS",
+    "HD",
+    paste0(
+      "hd",
+      year,
+      ".csv"
+    )
+  )
+  
+  readr::read_csv(
+    hd_file,
+    show_col_types = FALSE
+  ) |>
+    transmute(
+      unitid = as.integer(UNITID),
+      year = year,
+      region = as.integer(OBEREG)
+    )
+}
+
+# Apply the region-import function to every study year.
+region_data <- purrr::map_dfr(
+  years,
+  read_region_year
+)
+
+# ------------------------------------------------------------
+# Restrict region information to Walker sample
+# ------------------------------------------------------------
+
+region_walker <- maindf |>
+  
+  # Start with the exact observations from the
+  # original replication sample.
+  select(
+    unitid,
+    year
+  ) |>
+  
+  # Add the institution's IPEDS region.
+  left_join(
+    region_data,
+    by = c(
+      "unitid",
+      "year"
+    )
+  )
