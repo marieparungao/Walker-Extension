@@ -3,8 +3,8 @@
 # 02_process_ipeds.R
 #
 # Purpose:
-# Import, clean, and combine IPEDS admissions data
-# for 2018-2022
+# Reproduce the original Walker analysis dataset by combining
+# IPEDS data, U.S. News rankings, and abortion-policy data.
 # ------------------------------------------------------------
 
 # Load packages
@@ -33,6 +33,12 @@ source(
 # Study years
 years <- 2018:2022
 
+# Main folder containing downloaded IPEDS ZIP files
+ipeds_folder <- here::here(
+  "data",
+  "original data",
+  "IPEDS"
+)
 
 # ------------------------------------------------------------
 # Extract selected IPEDS files
