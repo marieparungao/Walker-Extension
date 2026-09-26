@@ -1,5 +1,5 @@
 # ------------------------------------------------------------
-# Walker et al. Replication
+# Walker et al. Extension
 # 01_download_ipeds.R
 #
 # Purpose:
@@ -35,7 +35,9 @@ adm_zip_files <- purrr::map(
   years,
   ~ download_ipeds("ADM", .x)
 
-)# Download IPEDS Directory files
+)
+
+# Download IPEDS Directory files
 hd_zip_files <- purrr::map(
   years,
   ~ download_ipeds("HD", .x)
