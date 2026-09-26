@@ -60,8 +60,46 @@ hd_folder <- here::here(
 )
 
 
-dir.create(adm_folder, showWarnings = FALSE)
-dir.create(hd_folder, showWarnings = FALSE)
+dir.create(
+  adm_folder,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+dir.create(
+  hd_folder,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+# ------------------------------------------------------------
+# Confirm required ZIP files exist
+# ------------------------------------------------------------
+
+required_zip_files <- c(
+  paste0("ADM", years, ".zip"),
+  paste0("HD", years, ".zip")
+)
+
+missing_zip_files <- required_zip_files[
+  !file.exists(
+    file.path(
+      ipeds_folder,
+      required_zip_files
+    )
+  )
+]
+
+if (length(missing_zip_files) > 0) {
+  stop(
+    "Required IPEDS ZIP files are missing. ",
+    "Run 01_download_ipeds.R first. Missing: ",
+    paste(
+      missing_zip_files,
+      collapse = ", "
+    )
+  )
+}
 
 # Extract revised ADM files
 for (year in years) {

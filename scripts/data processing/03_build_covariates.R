@@ -213,8 +213,40 @@ sfa_folder <- here::here(
 
 dir.create(
   sfa_folder,
+  recursive = TRUE,
   showWarnings = FALSE
 )
+
+# Confirm the SFA ZIP files were downloaded by
+# 01_download_ipeds.R before attempting extraction.
+
+required_sfa_zip_files <- sprintf(
+  "SFA%02d%02d.zip",
+  years %% 100,
+  (years + 1) %% 100
+)
+
+missing_sfa_zip_files <- required_sfa_zip_files[
+  !file.exists(
+    here::here(
+      "data",
+      "original data",
+      "IPEDS",
+      required_sfa_zip_files
+    )
+  )
+]
+
+if (length(missing_sfa_zip_files) > 0) {
+  stop(
+    "Required SFA ZIP files are missing. ",
+    "Run 01_download_ipeds.R first. Missing: ",
+    paste(
+      missing_sfa_zip_files,
+      collapse = ", "
+    )
+  )
+}
 
 # Construct the SFA ZIP filename corresponding to each
 # Walker analysis year and extract its contents.

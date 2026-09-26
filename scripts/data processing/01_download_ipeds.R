@@ -30,6 +30,26 @@ source(
 # Years used in the Walker et al. analysis
 years <- 2018:2022
 
+# ------------------------------------------------------------
+# Create IPEDS raw-data folder
+# ------------------------------------------------------------
+
+# Raw IPEDS files are not stored on GitHub because they can
+# be reproduced from the download code. Create the folder
+# structure automatically when the project is run on a new
+# computer.
+
+ipeds_folder <- here::here(
+  "data",
+  "original data",
+  "IPEDS"
+)
+
+dir.create(
+  ipeds_folder,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
 
 # Download IPEDS Admissions files for all study years
 adm_zip_files <- purrr::map(
@@ -104,3 +124,35 @@ sfa_zip_files <- purrr::map(
   years,
   download_sfa
 )
+# ------------------------------------------------------------
+# Verify IPEDS ZIP downloads
+# ------------------------------------------------------------
+
+expected_zip_files <- c(
+  paste0("ADM", years, ".zip"),
+  paste0("HD", years, ".zip"),
+  sprintf(
+    "SFA%02d%02d.zip",
+    years %% 100,
+    (years + 1) %% 100
+  )
+)
+
+missing_zip_files <- expected_zip_files[
+  !file.exists(
+    file.path(
+      ipeds_folder,
+      expected_zip_files
+    )
+  )
+]
+
+if (length(missing_zip_files) > 0) {
+  stop(
+    "The following IPEDS ZIP files were not downloaded: ",
+    paste(
+      missing_zip_files,
+      collapse = ", "
+    )
+  )
+}
