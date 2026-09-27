@@ -1,38 +1,54 @@
 # ------------------------------------------------------------
-# Walker Extension
-# 01_leave_one_out.R
+# Walker et al. Extension
+# Leave-one-out exercise
 # 
 # Purpose:
-# Test whether the main 2022 event-study estimate is driven
+# Test whether the 2022 event-study estimate is driven
 # by any single state.
 # ------------------------------------------------------------
+
 pacman::p_load(
   tidyverse,
   here,
   fixest,
   broom
 )
-# Load final balanced analysis dataset
+
+# Load balanced analysis dataset
 load(
   here::here(
     "data",
     "saved data",
-    "maindf.RData"
+    "extension_analysis_df.RData"
   )
 )
+
+loo_sample <- extension_analysis_df |>
+  filter(
+    rank_2023 <= 100
+  )
+
 # ------------------------------------------------------------
 # Baseline model
 # ------------------------------------------------------------
 model_baseline <- fixest::feols(
-  wshare ~ i(
-    year,
-    repeal,
-    ref = 2021
-  ) |
+  wshare ~
+    i(
+      year,
+      repeal,
+      ref = 2021
+    ) +
+    unemployment_rate +
+    real_min_wage +
+    state_gdp +
+    population +
+    acceptance_rate +
+    net_price |
     unitid + state + year,
-  data = maindf,
+  data = loo_sample,
   cluster = ~ state
 )
+
 baseline_2022 <- broom::tidy(
   model_baseline,
   conf.int = TRUE
@@ -45,29 +61,48 @@ baseline_2022 <- broom::tidy(
     conf_low = conf.low,
     conf_high = conf.high
   )
+
 # ------------------------------------------------------------
 # Leave-one-state-out exercise
 # ------------------------------------------------------------
 # List of states in analysis sample
-states <- sort(unique(maindf$state))
+states <- sort(
+  unique(
+    loo_sample$state
+  )
+)
+
 # Empty object to store results
 loo_results <- tibble()
+
 # Re-estimate model after dropping each state
 for (s in states) {
+  
   # Remove one state
-  df_loo <- maindf |>
-    filter(state != s)
+  df_loo <- loo_sample |>
+    filter(
+      state != s
+    )
+  
   # Estimate same baseline model
   model_loo <- fixest::feols(
-    wshare ~ i(
-      year,
-      repeal,
-      ref = 2021
-    ) |
+    wshare ~
+      i(
+        year,
+        repeal,
+        ref = 2021
+      ) +
+      unemployment_rate +
+      real_min_wage +
+      state_gdp +
+      population +
+      acceptance_rate +
+      net_price |
       unitid + state + year,
     data = df_loo,
     cluster = ~ state
   )
+  
   # Extract 2022 treatment coefficient
   coef_2022 <- broom::tidy(
     model_loo,
@@ -84,12 +119,14 @@ for (s in states) {
       conf_high = conf.high,
       p_value = p.value
     )
+  
   # Add to results
   loo_results <- bind_rows(
     loo_results,
     coef_2022
   )
 }
+
 #Convert effects to percentage points 
   baseline_pp <- baseline_2022$estimate * 100
   loo_results <- loo_results |>
@@ -98,7 +135,7 @@ for (s in states) {
     conf_low_pp = conf_low * 100,
     conf_high_pp = conf_high * 100
   )
-print(loo_results)
+
 #Create figure 
 loo_plot <- ggplot(
   loo_results,
@@ -134,6 +171,7 @@ loo_plot <- ggplot(
   ) +
   theme_minimal(base_size = 12)
 loo_plot
+
 #save plot 
 ggsave(
   filename = here::here(
@@ -146,6 +184,7 @@ ggsave(
   height = 8,
   dpi = 300
 )
+
 #Save underlying results 
 readr::write_csv(
   loo_results,
@@ -155,6 +194,7 @@ readr::write_csv(
     "leave_one_out.csv"
   )
 )
+
 #Find most impactful coefficient  
 loo_summary <- loo_results |>
   summarize(
@@ -165,8 +205,10 @@ loo_summary <- loo_results |>
     significant_5pct = sum(p_value < 0.05),
     total_models = n()
   )
+
 #Print summary of results 
 print(loo_summary)
+
 #Identify most impactful state exclusion 
 most_influential <- loo_results |>
   mutate(
