@@ -37,22 +37,6 @@ analysis_2023 <- extension_analysis_df |>
   )
 
 # ------------------------------------------------------------
-# Inspect institutional control
-# ------------------------------------------------------------
-
-analysis_2023 |>
-  distinct(
-    unitid,
-    control,
-    repeal
-  ) |>
-  count(
-    control,
-    repeal,
-    name = "schools"
-  )
-
-# ------------------------------------------------------------
 # Create public and private samples
 # ------------------------------------------------------------
 
@@ -88,12 +72,6 @@ model_public <- fixest::feols(
   cluster = ~ state
 )
 
-print(
-  summary(
-    model_public
-  )
-)
-
 # ------------------------------------------------------------
 # Private nonprofit university event study
 # with time-varying covariates
@@ -117,28 +95,21 @@ model_private <- fixest::feols(
   cluster = ~ state
 )
 
-print(
-  summary(
-    model_private
-  )
-)
-
 # ------------------------------------------------------------
 # Joint pre-treatment tests
 # ------------------------------------------------------------
 
 pretrend_public <- fixest::wald(
   model_public,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 pretrend_private <- fixest::wald(
   model_private,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
-
-print(pretrend_public)
-print(pretrend_private)
 
 # ------------------------------------------------------------
 # Formal test of public-private difference
@@ -186,17 +157,10 @@ model_public_private <- fixest::feols(
   cluster = ~ state
 )
 
-print(
-  summary(
-    model_public_private
-  )
-)
-
 # ------------------------------------------------------------
 # Create public/private 2022 results table
 # ------------------------------------------------------------
-
-# Extract the 2022 estimate from the separate public model.
+# Extract the 2022 estimate from the public model.
 public_2022 <- broom::tidy(
   model_public
 ) |>
@@ -204,7 +168,7 @@ public_2022 <- broom::tidy(
     term == "year::2022:repeal"
   )
 
-# Extract the 2022 estimate from the separate private model.
+# Extract the 2022 estimate from the private model.
 private_2022 <- broom::tidy(
   model_private
 ) |>
@@ -221,12 +185,7 @@ private_difference_2022 <- broom::tidy(
     term == "year::2022:repeal_private"
   )
 
-# Create a compact comparison table.
-# Public and private estimates come from the separate subgroup
-# models. The private-public difference comes from the pooled
-# interaction model, which provides the formal test of whether
-# the 2022 effects differ by institutional control.
-
+# Create one compact results table.
 institution_type_results <- tibble(
   group = c(
     "Public",
@@ -242,11 +201,26 @@ institution_type_results <- tibble(
     public_2022$p.value,
     private_2022$p.value,
     private_difference_2022$p.value
+  ),
+  pretrend_p = c(
+    pretrend_public$p,
+    pretrend_private$p,
+    NA_real_
   )
 )
 
 print(
   institution_type_results
+)
+
+# Save the compact results table.
+readr::write_csv(
+  institution_type_results,
+  here::here(
+    "results",
+    "tables",
+    "institution_type_placebo_results.csv"
+  )
 )
 
 # ------------------------------------------------------------

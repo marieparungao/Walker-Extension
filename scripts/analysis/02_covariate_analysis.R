@@ -1,6 +1,6 @@
 # ------------------------------------------------------------
 # Walker et al. Extension
-# 04_covariate_analysis.R
+# 02_covariate_analysis.R
 #
 # Purpose:
 # Compare the original Walker event-study specification with
@@ -55,11 +55,6 @@ model_baseline_extension <- fixest::feols(
   cluster = ~ state
 )
 
-print(
-  summary(
-    model_baseline_extension
-  )
-)
 # ------------------------------------------------------------
 # Extract baseline event-study coefficients
 # ------------------------------------------------------------
@@ -96,21 +91,14 @@ baseline_extension_coefs <- broom::tidy(
   ) |>
   arrange(year)
 
-print(
-  baseline_extension_coefs
-)
-
 # ------------------------------------------------------------
 # Joint pre-treatment test: baseline model
 # ------------------------------------------------------------
 
 pretrend_baseline <- fixest::wald(
   model_baseline_extension,
-  keep = "year::2018|year::2019|year::2020"
-)
-
-print(
-  pretrend_baseline
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 # ------------------------------------------------------------
@@ -137,12 +125,6 @@ model_covariates <- fixest::feols(
     unitid + state + year,
   data = analysis_2023,
   cluster = ~ state
-)
-
-print(
-  summary(
-    model_covariates
-  )
 )
 
 # ------------------------------------------------------------
@@ -181,47 +163,14 @@ covariate_coefs <- broom::tidy(
   ) |>
   arrange(year)
 
-print(
-  covariate_coefs
-)
-
 # ------------------------------------------------------------
 # Joint pre-treatment test: covariate model
 # ------------------------------------------------------------
 
 pretrend_covariates <- fixest::wald(
   model_covariates,
-  keep = "year::2018|year::2019|year::2020"
-)
-
-print(
-  pretrend_covariates
-)
-
-# ------------------------------------------------------------
-# Compare baseline and covariate specifications
-# ------------------------------------------------------------
-
-covariate_comparison <- baseline_extension_coefs |>
-  select(
-    year,
-    baseline_estimate_pp = estimate_pp,
-    baseline_se_pp = std_error_pp,
-    baseline_p = p.value
-  ) |>
-  left_join(
-    covariate_coefs |>
-      select(
-        year,
-        covariate_estimate_pp = estimate_pp,
-        covariate_se_pp = std_error_pp,
-        covariate_p = p.value
-      ),
-    by = "year"
-  )
-
-print(
-  covariate_comparison
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 # ============================================================
@@ -273,45 +222,197 @@ model_school_covariates <- fixest::feols(
 # Joint pre-treatment test: state covariates only
 pretrend_state <- fixest::wald(
   model_state_covariates,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 # Joint pre-treatment test: school covariates only
 pretrend_school <- fixest::wald(
   model_school_covariates,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
-print(pretrend_state)
-print(pretrend_school)
-
 # ------------------------------------------------------------
-# Diagnostic comparison of 2022 estimates
+# Final comparison of 2022 estimates
 # ------------------------------------------------------------
 
 model_2022_comparison <- bind_rows(
-  broom::tidy(model_baseline_extension) |>
-    filter(term == "year::2022:repeal") |>
-    mutate(model = "Baseline"),
   
-  broom::tidy(model_state_covariates) |>
-    filter(term == "year::2022:repeal") |>
-    mutate(model = "State covariates"),
+  broom::tidy(
+    model_baseline_extension,
+    conf.int = TRUE
+  ) |>
+    filter(
+      term == "year::2022:repeal"
+    ) |>
+    mutate(
+      model = "Baseline",
+      pretrend_p = pretrend_baseline$p
+    ),
   
-  broom::tidy(model_school_covariates) |>
-    filter(term == "year::2022:repeal") |>
-    mutate(model = "School covariates"),
+  broom::tidy(
+    model_state_covariates,
+    conf.int = TRUE
+  ) |>
+    filter(
+      term == "year::2022:repeal"
+    ) |>
+    mutate(
+      model = "State covariates",
+      pretrend_p = pretrend_state$p
+    ),
   
-  broom::tidy(model_covariates) |>
-    filter(term == "year::2022:repeal") |>
-    mutate(model = "All covariates")
+  broom::tidy(
+    model_school_covariates,
+    conf.int = TRUE
+  ) |>
+    filter(
+      term == "year::2022:repeal"
+    ) |>
+    mutate(
+      model = "School covariates",
+      pretrend_p = pretrend_school$p
+    ),
+  
+  broom::tidy(
+    model_covariates,
+    conf.int = TRUE
+  ) |>
+    filter(
+      term == "year::2022:repeal"
+    ) |>
+    mutate(
+      model = "All covariates",
+      pretrend_p = pretrend_covariates$p
+    )
+  
 ) |>
   transmute(
     model,
     estimate_pp = estimate * 100,
     std_error_pp = std.error * 100,
-    p_value = p.value
+    conf_low_pp = conf.low * 100,
+    conf_high_pp = conf.high * 100,
+    p_value = p.value,
+    pretrend_p
   )
 
-print(model_2022_comparison)
+print(
+  model_2022_comparison
+)
 
+readr::write_csv(
+  model_2022_comparison,
+  here::here(
+    "results",
+    "tables",
+    "covariate_2022_comparison.csv"
+  )
+)
+
+# ------------------------------------------------------------
+# Presentation figure: baseline vs. full-covariate model
+# ------------------------------------------------------------
+
+# Combine the event-study estimates from the baseline and
+# full-covariate models.
+covariate_plot_data <- bind_rows(
+  baseline_extension_coefs |>
+    mutate(
+      model = "Baseline"
+    ),
+  
+  covariate_coefs |>
+    mutate(
+      model = "All covariates"
+    )
+) |>
+  select(
+    year,
+    model,
+    estimate_pp,
+    conf_low_pp,
+    conf_high_pp
+  ) |>
+  
+  # Add the omitted 2021 reference year for both models.
+  bind_rows(
+    tibble(
+      year = c(2021, 2021),
+      model = c(
+        "Baseline",
+        "All covariates"
+      ),
+      estimate_pp = 0,
+      conf_low_pp = 0,
+      conf_high_pp = 0
+    )
+  ) |>
+  arrange(
+    model,
+    year
+  )
+
+# Plot the two event-study specifications together.
+covariate_comparison_plot <- ggplot(
+  covariate_plot_data,
+  aes(
+    x = year,
+    y = estimate_pp,
+    shape = model,
+    linetype = model,
+    group = model
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = conf_low_pp,
+      ymax = conf_high_pp
+    ),
+    width = 0.06,
+    position = position_dodge(width = 0.18)
+  ) +
+  geom_line(
+    position = position_dodge(width = 0.18)
+  ) +
+  geom_point(
+    size = 2.5,
+    position = position_dodge(width = 0.18)
+  ) +
+  scale_x_continuous(
+    breaks = 2018:2022
+  ) +
+  labs(
+    title = "Baseline vs. Covariate-Adjusted Event Study",
+    subtitle = "2021 is the omitted reference year",
+    x = "Application Year",
+    y = "Estimated effect (percentage points)",
+    shape = "Model",
+    linetype = "Model",
+    caption = paste0(
+      "Joint pre-trend p-values: Baseline = ",
+      round(pretrend_baseline$p, 3),
+      "; All covariates = ",
+      round(pretrend_covariates$p, 3)
+    )
+  )
+  theme_minimal(base_size = 12)
+
+covariate_comparison_plot
+
+ggsave(
+  filename = here::here(
+    "results",
+    "figures",
+    "covariate_model_comparison.png"
+  ),
+  plot = covariate_comparison_plot,
+  width = 8,
+  height = 5,
+  dpi = 300
+)

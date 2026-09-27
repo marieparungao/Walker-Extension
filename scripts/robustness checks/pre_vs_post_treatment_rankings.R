@@ -66,11 +66,6 @@ model_rank_2023 <- fixest::feols(
   cluster = ~ state
 )
 
-print(
-  summary(
-    model_rank_2023
-  )
-)
 
 # ------------------------------------------------------------
 # Full-covariate model: 2021 ranking sample
@@ -98,11 +93,6 @@ model_rank_2021 <- fixest::feols(
   cluster = ~ state
 )
 
-print(
-  summary(
-    model_rank_2021
-  )
-)
 
 # ------------------------------------------------------------
 # Joint pre-treatment tests
@@ -110,19 +100,15 @@ print(
 
 pretrend_rank_2023 <- fixest::wald(
   model_rank_2023,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 pretrend_rank_2021 <- fixest::wald(
   model_rank_2021,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
-
-cat("\n--- 2023 ranking sample: pre-trend test ---\n")
-print(pretrend_rank_2023)
-
-cat("\n--- 2021 ranking sample: pre-trend test ---\n")
-print(pretrend_rank_2021)
 
 # ------------------------------------------------------------
 # Compare 2022 estimates across ranking definitions
@@ -158,8 +144,23 @@ ranking_2022_comparison <- bind_rows(
     conf_low_pp = conf.low * 100,
     conf_high_pp = conf.high * 100,
     p_value = p.value
+  ) |>
+  mutate(
+    pretrend_p = c(
+      pretrend_rank_2023$p,
+      pretrend_rank_2021$p
+    )
   )
 
 print(
   ranking_2022_comparison
+)
+
+readr::write_csv(
+  ranking_2022_comparison,
+  here::here(
+    "results",
+    "tables",
+    "ranking_year_2022_comparison.csv"
+  )
 )

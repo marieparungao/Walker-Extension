@@ -117,37 +117,27 @@ model_top50 <- fixest::feols(
   cluster = ~ state
 )
 
-print(summary(model_top100))
-print(summary(model_top75))
-print(summary(model_top50))
-
 # ------------------------------------------------------------
 # Joint pre-treatment tests
 # ------------------------------------------------------------
 
 pretrend_top100 <- fixest::wald(
   model_top100,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 pretrend_top75 <- fixest::wald(
   model_top75,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 pretrend_top50 <- fixest::wald(
   model_top50,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
-
-cat("\n--- Top 100: pre-trend test ---\n")
-print(pretrend_top100)
-
-cat("\n--- Top 75: pre-trend test ---\n")
-print(pretrend_top75)
-
-cat("\n--- Top 50: pre-trend test ---\n")
-print(pretrend_top50)
 
 # ------------------------------------------------------------
 # Compare 2022 estimates across Top-school cutoffs
@@ -194,8 +184,84 @@ top_sample_2022_comparison <- bind_rows(
     conf_low_pp = conf.low * 100,
     conf_high_pp = conf.high * 100,
     p_value = p.value
+  ) |>
+  mutate(
+    pretrend_p = c(
+      pretrend_top100$p,
+      pretrend_top75$p,
+      pretrend_top50$p
+    )
   )
 
 print(
   top_sample_2022_comparison
+)
+
+readr::write_csv(
+  top_sample_2022_comparison,
+  here::here(
+    "results",
+    "tables",
+    "alternative_top_school_2022_comparison.csv"
+  )
+)
+# ------------------------------------------------------------
+# Presentation figure: 2022 estimates by Top-school cutoff
+# ------------------------------------------------------------
+
+top_sample_plot <- ggplot(
+  top_sample_2022_comparison,
+  aes(
+    x = estimate_pp,
+    y = factor(
+      sample,
+      levels = c(
+        "Top 100",
+        "Top 75",
+        "Top 50"
+      )
+    )
+  )
+) +
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed"
+  ) +
+  geom_errorbar(
+    aes(
+      xmin = conf_low_pp,
+      xmax = conf_high_pp
+    ),
+    width = 0.12,
+    orientation = "y"
+  ) +
+  geom_point(
+    size = 2.8
+  ) +
+  labs(
+    title = "Robustness to Alternative Top-School Cutoffs",
+    subtitle = "2022 treatment effect with full time-varying covariates",
+    x = "Estimated effect (percentage points)",
+    y = "Sample definition",
+    caption = "Bars show 95% confidence intervals"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.caption = element_text(
+      hjust = 0.5
+    )
+  )
+
+top_sample_plot
+
+ggsave(
+  filename = here::here(
+    "results",
+    "figures",
+    "alternative_top_school_2022.png"
+  ),
+  plot = top_sample_plot,
+  width = 7,
+  height = 4.5,
+  dpi = 300
 )

@@ -38,19 +38,6 @@ model_main <- fixest::feols(
   cluster = ~ state
 )
 
-# Display regression results
-print(summary(model_main))
-
-# ------------------------------------------------------------
-# Plot main event-study estimates
-# ------------------------------------------------------------
-
-fixest::iplot(
-  model_main,
-  main = "Female Applicant Share",
-  xlab = "Year",
-  ylab = "Estimated Treatment Effect"
-)
 # ------------------------------------------------------------
 # Extract event-study coefficients
 # ------------------------------------------------------------
@@ -81,18 +68,15 @@ event_coefs <- broom::tidy(
   ) |>
   arrange(year)
 
-print(event_coefs)
-
 # ------------------------------------------------------------
 # Joint test of pre-treatment coefficients
 # ------------------------------------------------------------
 
 pretrend_test <- fixest::wald(
   model_main,
-  keep = "year::2018|year::2019|year::2020"
+  keep = "year::2018|year::2019|year::2020",
+  print = FALSE
 )
-
-print(pretrend_test)
 
 # ------------------------------------------------------------
 # Create presentation-ready event-study figure
