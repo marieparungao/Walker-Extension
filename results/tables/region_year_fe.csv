@@ -1,0 +1,3 @@
+specification,estimate_pp,std_error_pp,conf_low_pp,conf_high_pp,p_value,pretrend_p
+All covariates,-1.153,0.309,-1.785,-0.522,0.001,0.03615367678613601
+Region-by-Year FE,0.068,0.229,-0.399,0.536,0.767,0.14358440906304668

@@ -86,7 +86,7 @@ baseline_coefs <- broom::tidy(
 ) |>
   filter(str_detect(term,"^year::")) |>
   mutate(
-    specification="Baseline",
+    specification="All covariates",
     year=as.integer(str_extract(term,"\\d{4}")),
     estimate_pp=estimate*100,
     std_error_pp=std.error*100,
@@ -124,8 +124,6 @@ region_fe_table <- region_fe_results |>
     p_value=round(p.value,3)
   )
 
-print(region_fe_table)
-
 # 7. PRE-TREND TEST --------------------------------------------------------
 
 pretrend_baseline <- fixest::wald(
@@ -139,6 +137,16 @@ pretrend_region <- fixest::wald(
   keep="year::2018|year::2019|year::2020",
   print = FALSE
 )
+# Add joint pre-trend p-values to comparison table
+region_fe_table <- region_fe_table |>
+  mutate(
+    pretrend_p = case_when(
+      specification == "All covariates" ~ pretrend_baseline$p,
+      specification == "Region-by-Year FE" ~ pretrend_region$p
+    )
+  )
+
+print(region_fe_table)
 
 # 8. FIGURE ---------------------------------------------------------------
 
@@ -201,6 +209,7 @@ region_fe_plot <- ggplot(
   theme_minimal(base_size=12)
 
 region_fe_plot
+
 # 9. SAVE OUTPUTS ---------------------------------------------------------
 
 ggsave(

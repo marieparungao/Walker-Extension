@@ -5,11 +5,6 @@
 # Purpose:
 # Rebuild the replication/extension data, estimate the main
 # covariate model, and run the completed robustness checks
-# in the correct dependency order.
-#
-# COME BACK AND FIX THIS AT THE END
-# leave-one-out and region-by-year checks will be
-# added after reviewing them together
 # ------------------------------------------------------------
 
 pacman::p_load(
@@ -34,13 +29,10 @@ source(
     "01_download_ipeds.R"
   )
 )
-
 # ------------------------------------------------------------
 # 2. Build original Walker replication dataset
 # ------------------------------------------------------------
 
-# Extracts ADM and HD files and reconstructs the original
-# balanced Walker analysis dataset (maindf).
 source(
   here::here(
     "scripts",
@@ -48,7 +40,6 @@ source(
     "02_process_ipeds.R"
   )
 )
-
 # ------------------------------------------------------------
 # 3. Build time-varying covariates
 # ------------------------------------------------------------
@@ -62,7 +53,6 @@ source(
     "03_build_covariates.R"
   )
 )
-
 # ------------------------------------------------------------
 # 4. Build extension and robustness samples
 # ------------------------------------------------------------
@@ -76,7 +66,6 @@ source(
     "04_build_extension_sample.R"
   )
 )
-
 # ------------------------------------------------------------
 # 5. Build final extension analysis dataset
 # ------------------------------------------------------------
@@ -90,7 +79,6 @@ source(
     "05_build_analysis_data.R"
   )
 )
-
 # ------------------------------------------------------------
 # 6. Run original Walker baseline model
 # ------------------------------------------------------------
@@ -113,9 +101,30 @@ source(
     "02_covariate_analysis.R"
   )
 )
-
 # ------------------------------------------------------------
-# 8. Pre- vs. post-treatment ranking robustness check
+# 8. Leave-one-state-out robustness check
+# ------------------------------------------------------------
+
+source(
+  here::here(
+    "scripts",
+    "robustness checks",
+    "leave_one_out.R"
+  )
+)
+# ------------------------------------------------------------
+# 9. Region-by-year fixed effects robustness check
+# ------------------------------------------------------------
+
+source(
+  here::here(
+    "scripts",
+    "robustness checks",
+    "region_by_year_fixed_effects.R"
+  )
+)
+# ------------------------------------------------------------
+# 10. Pre- vs. post-treatment ranking robustness check
 # ------------------------------------------------------------
 
 source(
@@ -126,7 +135,7 @@ source(
   )
 )
 # ------------------------------------------------------------
-# 9. Alternative Top-school sample robustness check
+# 11. Alternative Top-school sample robustness check
 # ------------------------------------------------------------
 
 source(
@@ -136,9 +145,8 @@ source(
     "alternative_top_school_sample.R"
   )
 )
-
 # ------------------------------------------------------------
-# 10. Institution-type placebo / heterogeneity check
+# 12. Institution-type placebo / heterogeneity check
 # ------------------------------------------------------------
 
 source(
