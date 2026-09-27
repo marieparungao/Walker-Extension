@@ -54,7 +54,31 @@ read_region_year <- function(year) {
     transmute(
       unitid = as.integer(UNITID),
       year = year,
-      region = as.integer(OBEREG)
+      
+      # Keep the original numeric IPEDS region code.
+      # This preserves the existing workflow and any code
+      # that already uses "region".
+      region = as.integer(OBEREG),
+      
+      # Add a readable label for each IPEDS region code.
+      # This is mainly for interpretation and for making
+      # the region-by-year fixed effects easier to understand.
+      region_name = factor(
+        OBEREG,
+        levels = 0:9,
+        labels = c(
+          "U.S. Service Schools",
+          "New England",
+          "Mid East",
+          "Great Lakes",
+          "Plains",
+          "Southeast",
+          "Southwest",
+          "Rocky Mountains",
+          "Far West",
+          "Outlying Areas"
+        )
+      )
     )
 }
 
