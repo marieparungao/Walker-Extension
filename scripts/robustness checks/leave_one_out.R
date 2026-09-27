@@ -29,7 +29,7 @@ loo_sample <- extension_analysis_df |>
   )
 
 # ------------------------------------------------------------
-# Baseline model
+# Full-sample covariate model
 # ------------------------------------------------------------
 model_baseline <- fixest::feols(
   wshare ~
@@ -152,12 +152,13 @@ loo_plot <- ggplot(
     xintercept = 0,
     linetype = "solid"
   ) +
-  geom_errorbarh(
+  geom_errorbar(
     aes(
       xmin = conf_low_pp,
       xmax = conf_high_pp
     ),
-    height = 0.15
+    width = 0.15,
+    orientation = "y"
   ) +
   geom_point(
     size = 2

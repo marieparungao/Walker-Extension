@@ -1,9 +1,9 @@
 # ------------------------------------------------------------
-# Walker Extension
-# 02_region_year_fe.R
+# Walker et al. Extension
+# Region by Year Fixed Effects
 #
 # Purpose:
-# Test robustness of the main event-study model to
+# Test robustness of the covariate model to
 # region-by-year fixed effects
 # ------------------------------------------------------------
 
@@ -22,6 +22,7 @@ load(
 # Recreate original 2023 top-100 sample
 region_sample <- extension_analysis_df |>
   filter(rank_2023<=100)
+
 # 2. CHECK SAMPLE ----------------------------------------------------------
 
 names(region_sample)
@@ -36,24 +37,47 @@ region_sample |>
 n_distinct(region_sample$unitid)
 nrow(region_sample)
 table(region_sample$repeal,useNA="ifany")
-# 3. BASELINE MODEL --------------------------------------------------------
+
+# 3. ALL COVARIATES MODEL --------------------------------------------------------
 
 model_baseline <- fixest::feols(
-  wshare ~ i(year,repeal,ref=2021) | unitid + state + year,
-  data=region_sample,
-  cluster=~state
+  wshare ~
+    i(
+      year,
+      repeal,
+      ref = 2021
+    ) +
+    unemployment_rate +
+    real_min_wage +
+    state_gdp +
+    population +
+    acceptance_rate +
+    net_price |
+    unitid + state + year,
+  data = region_sample,
+  cluster = ~ state
 )
 
-print(summary(model_baseline))
 # 4. REGION-BY-YEAR FE MODEL ----------------------------------------------
 
 model_region_year <- fixest::feols(
-  wshare ~ i(year,repeal,ref=2021) | unitid + region^year,
-  data=region_sample,
-  cluster=~state
+  wshare ~
+    i(
+      year,
+      repeal,
+      ref = 2021
+    ) +
+    unemployment_rate +
+    real_min_wage +
+    state_gdp +
+    population +
+    acceptance_rate +
+    net_price |
+    unitid + region^year,
+  data = region_sample,
+  cluster = ~ state
 )
 
-print(summary(model_region_year))
 # 5. EXTRACT RESULTS -------------------------------------------------------
 
 baseline_coefs <- broom::tidy(
@@ -86,6 +110,7 @@ region_fe_results <- bind_rows(
   baseline_coefs,
   region_coefs
 )
+
 # 6. RESULTS TABLE ---------------------------------------------------------
 
 region_fe_table <- region_fe_results |>
@@ -100,20 +125,21 @@ region_fe_table <- region_fe_results |>
   )
 
 print(region_fe_table)
+
 # 7. PRE-TREND TEST --------------------------------------------------------
 
 pretrend_baseline <- fixest::wald(
   model_baseline,
-  keep="year::2018|year::2019|year::2020"
+  keep="year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
 pretrend_region <- fixest::wald(
   model_region_year,
-  keep="year::2018|year::2019|year::2020"
+  keep="year::2018|year::2019|year::2020",
+  print = FALSE
 )
 
-print(pretrend_baseline)
-print(pretrend_region)
 # 8. FIGURE ---------------------------------------------------------------
 
 region_plot_data <- region_fe_results |>
@@ -127,7 +153,7 @@ region_plot_data <- region_fe_results |>
   bind_rows(
     tibble(
       year=c(2021,2021),
-      specification=c("Baseline","Region-by-Year FE"),
+      specification=c("All covariates","Region-by-Year FE"),
       estimate_pp=0,
       conf_low_pp=0,
       conf_high_pp=0
@@ -167,7 +193,7 @@ region_fe_plot <- ggplot(
   ) +
   labs(
     title="Robustness to Region-by-Year Fixed Effects",
-    subtitle="Baseline versus region-by-year specification",
+    subtitle="Covariate-adjusted model versus region-by-year specification",
     x="Application Year",
     y="Estimated effect (percentage points)",
     shape="Specification"
