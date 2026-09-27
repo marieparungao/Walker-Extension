@@ -2,3 +2,4 @@
 .RData
 .Rproj.user/
 data/original data/IPEDS/
+.DS_Store
